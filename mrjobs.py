@@ -14,8 +14,9 @@ class TweetAnalyser(MRJob):
     def steps(self):
         return [
             MRStep(mapper=self.mapper,
-                   reducer=self.reducer_count)
-           # MRStep(reducer=self.find_max)
+                   reducer=self.reducer_count)#,
+           # Uncomment line below to get higher value con twitter evaluation 
+            #MRStep(reducer=self.find_max)
         ]
 
     def mapper(self, key, word):
@@ -26,7 +27,6 @@ class TweetAnalyser(MRJob):
                 tweet_text = self.extract_text(mytweet)
                 list_words = tweet_text.split(" ")
                 calification = self.valuate_tweet(list_words, country)
-
                 yield (city, (calification, 1))
     
     def reducer_count(self, city, evaluation):
@@ -36,14 +36,20 @@ class TweetAnalyser(MRJob):
             count += counter
             total_evaluation += calification
 
-        mean_calification = total_evaluation/count
-        yield None, (mean_calification, city)
+        mean_calification = total_evaluation/count        
+        yield (round(mean_calification, 2), city)
+
+        #Uncomment line below to get higher value
+        #yield None ,(round(mean_calification, 2), city)
     
     def find_max(self, _, calification_country):
         yield max(calification_country)
 
     def extract_country_city(self, tweet):
-        return tweet['place']['country_code'], tweet['place']['name'].encode("utf-8")
+        if tweet['place']['place_type'] == "city":
+            return tweet['place']['country_code'], tweet['place']['name'].encode("utf-8")
+        else:
+            return None, None
 
     def valuate_tweet(self, list_of_words, country):
         calification = 0
