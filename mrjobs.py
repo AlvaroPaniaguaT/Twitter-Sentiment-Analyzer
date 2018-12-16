@@ -14,9 +14,8 @@ class TweetAnalyser(MRJob):
     def steps(self):
         return [
             MRStep(mapper=self.mapper,
-                   combiner=self.combiner_sum,
                    reducer=self.reducer_count)
-            #MRStep(reducer=self.find_max)
+           # MRStep(reducer=self.find_max)
         ]
 
     def mapper(self, key, word):
@@ -30,24 +29,21 @@ class TweetAnalyser(MRJob):
 
                 yield (city, (calification, 1))
     
-    def combiner_sum(self, country, evaluation):
+    def reducer_count(self, city, evaluation):
         count = 0
-        total_evaluation = 0 
+        total_evaluation = 0
         for calification, counter in evaluation:
             count += counter
             total_evaluation += calification
-        
+
         mean_calification = total_evaluation/count
-        yield country, mean_calification
-    
-    def reducer_count(self, country, mean_calification):
-        yield None, (list(mean_calification)[0], country)
+        yield None, (mean_calification, city)
     
     def find_max(self, _, calification_country):
         yield max(calification_country)
 
     def extract_country_city(self, tweet):
-        return tweet['place']['country_code'], tweet['place']['full_name'].encode("utf-8")
+        return tweet['place']['country_code'], tweet['place']['name'].encode("utf-8")
 
     def valuate_tweet(self, list_of_words, country):
         calification = 0
@@ -60,6 +56,8 @@ class TweetAnalyser(MRJob):
             else:
                 if word in Sentiment_Dict_ES.keys():
                     calification += float(Sentiment_Dict_ES[word])
+                    num_words_calificated += 1
+
         if num_words_calificated == 0:
             return calification
         else:
@@ -106,4 +104,5 @@ if __name__ == "__main__":
         values = word_val.split("\t")
         Sentiment_Dict_ES[values[0].upper()] = float(values[1])
 
+    TweetAnalyser.SORT_VALUES = True
     TweetAnalyser.run()
