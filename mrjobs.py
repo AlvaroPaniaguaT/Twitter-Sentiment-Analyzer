@@ -1,23 +1,44 @@
-from mrjob.job import MRJob, MRStep
+#! /usr/bin/env python
+
+from mrjob.job import MRJob
+from mrjob.step import MRStep
 import re
 import json
 import unicodedata
-
+import sys
+sys.path.append('.')
 #WORD_RE = re.compile(r"[\w']+", re.IGNORECASE)
 
-Sentiment_Dict_US = dict()
-Sentiment_Dict_ES = dict()
+
 
 
 class TweetAnalyser(MRJob):
+    def configure_options(self):
+        super(TweetAnalyser, self).configure_options()
+        self.add_file_option('--USdict')
+        self.add_file_option('--ESdict')
 
     def steps(self):
         return [
-            MRStep(mapper=self.mapper,
-                   reducer=self.reducer_count)#,
-           # Uncomment line below to get higher value con twitter evaluation 
-            #MRStep(reducer=self.find_max)
+            MRStep(mapper_init=self.init_get_dicts,
+                   mapper=self.mapper,
+                   reducer=self.reducer_count),
+            MRStep(reducer=self.top_ten)
         ]
+
+    def init_get_dicts(self):
+        self.Sentiment_Dict_US = dict()
+        self.Sentiment_Dict_ES = dict()
+        file_US = open("AFINN-111.txt", "r")
+        file_ES = open("Redondo_words.csv", "r")
+        for word_val in file_US.read().decode("utf-8").split("\n"):
+            values = word_val.split("\t")
+            self.Sentiment_Dict_US[values[0].upper()] = float(values[1]) + 5
+
+
+        for word_val in file_ES.read().decode("utf-8").split("\n"):
+            values = word_val.split("\t")
+            self.Sentiment_Dict_ES[values[0].upper()] = float(values[1])
 
     def mapper(self, key, word):
         mytweet = self.filter_tweets(word)
@@ -37,13 +58,21 @@ class TweetAnalyser(MRJob):
             total_evaluation += calification
 
         mean_calification = total_evaluation/count        
-        yield (round(mean_calification, 2), city)
+        yield (None, (city, round(mean_calification, 2)))
 
-        #Uncomment line below to get higher value
-        #yield None ,(round(mean_calification, 2), city)
     
-    def find_max(self, _, calification_country):
-        yield max(calification_country)
+    def top_ten(self, _, city_califications):
+        higher_ten = []
+        for calification in city_califications:
+            higher_ten.append(calification)
+            higher_ten.sort(key=self.takeEvaluation, reverse=True)
+            higher_ten = higher_ten[0:9]
+
+        for values in higher_ten:
+            yield (values[0], values[1])
+
+    def takeEvaluation(self, element):
+        return element[1]
 
     def extract_country_city(self, tweet):
         if tweet['place']['place_type'] == "city":
@@ -56,12 +85,12 @@ class TweetAnalyser(MRJob):
         num_words_calificated = 0
         for word in list_of_words:
             if country == "US":
-                if word in Sentiment_Dict_US.keys():
-                    calification += float(Sentiment_Dict_US[word])
+                if word in self.Sentiment_Dict_US.keys():
+                    calification += float(self.Sentiment_Dict_US[word])
                     num_words_calificated += 1
             else:
-                if word in Sentiment_Dict_ES.keys():
-                    calification += float(Sentiment_Dict_ES[word])
+                if word in self.Sentiment_Dict_ES.keys():
+                    calification += float(self.Sentiment_Dict_ES[word])
                     num_words_calificated += 1
 
         if num_words_calificated == 0:
@@ -97,18 +126,4 @@ class TweetAnalyser(MRJob):
 
 
 if __name__ == "__main__":
-    
-    file_US = open("language/AFINN-111.txt", "r")
-    file_ES = open("language/Redondo_words.csv", "r")
-
-    for word_val in file_US.read().decode("utf-8").split("\n"):
-        values = word_val.split("\t")
-        Sentiment_Dict_US[values[0].upper()] = float(values[1]) + 5
-
-
-    for word_val in file_ES.read().decode("utf-8").split("\n"):
-        values = word_val.split("\t")
-        Sentiment_Dict_ES[values[0].upper()] = float(values[1])
-
-    TweetAnalyser.SORT_VALUES = True
     TweetAnalyser.run()
