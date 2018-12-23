@@ -24,7 +24,7 @@ Three ways to execute MRJobs.
   - Hadoop: Used to run MRJob in real hadoop system.
 
     ```console
-        python mrjobs.py -r hadoop <path to local file with tweets *.json*> \ 
+        python mrjobs.py -r hadoop <path to HDFS file with tweets *.json*> \ 
         --ESdict <path to local dict in Spanish> \
         --USdict <path to local dict for USA>
     ```
@@ -34,7 +34,7 @@ Three ways to execute MRJobs.
     *ec2_instance_type* and *num_ec2_core_instances* to use the type and number of EC2 machines wanted to run in the cluster.
 
     ```console
-        python mrjobs.py -r emr <path to local file with tweets *.json*> \ 
+        python mrjobs.py -r emr <path to S3 file with tweets *.json*> \ 
         --ESdict <path to local dict in Spanish> \
         --USdict <path to local dict for USA> \
         --conf_path <path in your local machine to configuration file> (optional)
