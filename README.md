@@ -3,7 +3,13 @@ An MRJob program to evaluate Tweets using AFINN and Redondo_words dicts.
 
 To execute the MRJob you need a json file with raw tweets from Twitter.
 
-Three ways to execute MRJobs.
+Three ways to execute MRJobs. First clone this repo and using a Terminal go to the folder with the cloned repository.
+
+```console
+        >>> git clone https://github.com/AlvaroPaniaguaT/Twitter-Sentiment-Analyzer
+        >>> cd Twitter-Sentiment-Analyzer 
+```
+
 
 - Inline: Used to run MRJob in local but don't simulating Hadoop system. To run this mode open Bash and type:
     
